@@ -149,10 +149,9 @@ Infrastructure considerations include horizontal scaling capabilities to accommo
 
 ### Team Size and Composition
 
-**Team:** 3-person team
-- **Full-Stack Developer** (primary role) - Frontend/backend development, API integration
-- **Data Analyst/Scientist** (primary role) - Analytics engine, KPI calculations, ranking algorithms
-- **Product Owner/UX Designer** (supporting role) - Requirements, design, stakeholder management
+**Team:** 2-person team
+- **Justin Wang** - Co-lead Analyst
+- **Jaden Path** - Co-lead Analyst
 
 ### Phase 1: Foundation & Core Analytics (Weeks 1-4: Jan 19 - Feb 14)
 
