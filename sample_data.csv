@@ -1,0 +1,13 @@
+property_name,property_type,submarket,total_units,occupied_units,revenue,operating_expenses,date
+Sunset Apartments,Multifamily,Downtown,120,114,450000,180000,2025-01-01
+Sunset Apartments,Multifamily,Downtown,120,116,460000,185000,2025-02-01
+Sunset Apartments,Multifamily,Downtown,120,118,470000,182000,2025-03-01
+Oak Plaza,Office,Midtown,50,45,320000,140000,2025-01-01
+Oak Plaza,Office,Midtown,50,47,335000,145000,2025-02-01
+Oak Plaza,Office,Midtown,50,48,340000,142000,2025-03-01
+Harbor View,Multifamily,Waterfront,200,180,780000,350000,2025-01-01
+Harbor View,Multifamily,Waterfront,200,185,800000,360000,2025-02-01
+Harbor View,Multifamily,Waterfront,200,190,820000,355000,2025-03-01
+Central Retail,Retail,Downtown,30,28,250000,90000,2025-01-01
+Central Retail,Retail,Downtown,30,29,260000,95000,2025-02-01
+Central Retail,Retail,Downtown,30,30,275000,92000,2025-03-01
