@@ -1,0 +1,535 @@
+openapi: 3.0.3
+info:
+  title: Portfolio Analytics Platform API
+  description: |
+    API for the Portfolio KPI Dashboard (P1 MVP).
+    Supports property data upload, KPI retrieval, and dashboard filtering.
+  version: 1.0.0
+  contact:
+    name: PHMS Real Estate Analytics
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development
+  - url: https://api.phms-analytics.local/v1
+    description: Production (placeholder)
+
+tags:
+  - name: Auth
+    description: Authentication endpoints
+  - name: Upload
+    description: Spreadsheet upload and status
+  - name: Properties
+    description: Property data and filtering
+  - name: KPIs
+    description: KPI metrics and trends
+  - name: Dashboard
+    description: Dashboard summary data
+
+paths:
+  # ============ AUTH ============
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: User login
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: User logout
+      operationId: logout
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Logout successful
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      operationId: getCurrentUser
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  # ============ UPLOAD ============
+  /uploads:
+    post:
+      tags: [Upload]
+      summary: Upload property spreadsheet
+      operationId: uploadSpreadsheet
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Excel (.xlsx) or CSV file
+      responses:
+        '202':
+          description: Upload accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Upload'
+        '400':
+          description: Invalid file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /uploads/{uploadId}:
+    get:
+      tags: [Upload]
+      summary: Get upload status
+      operationId: getUploadStatus
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: uploadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Upload details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Upload'
+        '404':
+          description: Upload not found
+
+  # ============ PROPERTIES ============
+  /properties:
+    get:
+      tags: [Properties]
+      summary: List properties with optional filters
+      operationId: listProperties
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: submarket
+          in: query
+          schema:
+            type: string
+          description: Filter by submarket
+        - name: property_type
+          in: query
+          schema:
+            type: string
+          description: Filter by property type
+        - name: min_units
+          in: query
+          schema:
+            type: integer
+          description: Minimum unit count
+        - name: max_units
+          in: query
+          schema:
+            type: integer
+          description: Maximum unit count
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated property list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyList'
+
+  /properties/{propertyId}:
+    get:
+      tags: [Properties]
+      summary: Get property details
+      operationId: getProperty
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Property details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyDetail'
+        '404':
+          description: Property not found
+
+  # ============ KPIs ============
+  /properties/{propertyId}/kpis:
+    get:
+      tags: [KPIs]
+      summary: Get KPIs for a property
+      operationId: getPropertyKPIs
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: period
+          in: query
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}$'
+          description: Specific period (YYYY-MM), defaults to latest
+      responses:
+        '200':
+          description: Property KPIs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyKPIs'
+
+  /properties/{propertyId}/kpis/trend:
+    get:
+      tags: [KPIs]
+      summary: Get KPI trend data (12 months)
+      operationId: getPropertyKPITrend
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: metric
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [noi, occupancy_rate, revenue_per_unit, expense_ratio]
+          description: Which metric to trend
+      responses:
+        '200':
+          description: Monthly trend data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPITrend'
+
+  # ============ DASHBOARD ============
+  /dashboard/summary:
+    get:
+      tags: [Dashboard]
+      summary: Get portfolio-wide summary statistics
+      operationId: getDashboardSummary
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: submarket
+          in: query
+          schema:
+            type: string
+          description: Filter by submarket
+        - name: property_type
+          in: query
+          schema:
+            type: string
+          description: Filter by property type
+      responses:
+        '200':
+          description: Portfolio summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+
+  /dashboard/filters:
+    get:
+      tags: [Dashboard]
+      summary: Get available filter options
+      operationId: getFilterOptions
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Filter options
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilterOptions'
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
+
+  schemas:
+    # ---- Auth ----
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        message:
+          type: string
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        role:
+          type: string
+          enum: [executive, portfolio_manager, analyst]
+
+    # ---- Upload ----
+    Upload:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        uploaded_at:
+          type: string
+          format: date-time
+        uploaded_by:
+          type: string
+        row_count:
+          type: integer
+        status:
+          type: string
+          enum: [processing, completed, failed]
+        error_message:
+          type: string
+          nullable: true
+
+    # ---- Properties ----
+    PropertySummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        external_id:
+          type: string
+        name:
+          type: string
+        address_city:
+          type: string
+        address_state:
+          type: string
+        total_units:
+          type: integer
+        property_type:
+          type: string
+        submarket:
+          type: string
+        latest_kpis:
+          $ref: '#/components/schemas/PropertyKPIs'
+
+    PropertyList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PropertySummary'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    PropertyDetail:
+      allOf:
+        - $ref: '#/components/schemas/PropertySummary'
+        - type: object
+          properties:
+            address_street:
+              type: string
+            address_zip:
+              type: string
+            acquisition_date:
+              type: string
+              format: date
+              nullable: true
+            upload_id:
+              type: string
+              format: uuid
+            created_at:
+              type: string
+              format: date-time
+
+    # ---- KPIs ----
+    PropertyKPIs:
+      type: object
+      properties:
+        period:
+          type: string
+          description: 'YYYY-MM format'
+        noi:
+          type: number
+          format: double
+          description: Net Operating Income (dollars)
+        occupancy_rate:
+          type: number
+          format: double
+          description: Occupancy percentage (0-100)
+        revenue_per_unit:
+          type: number
+          format: double
+          description: Revenue per unit (dollars)
+        expense_ratio:
+          type: number
+          format: double
+          description: Total expense ratio (0-100)
+        calculated_at:
+          type: string
+          format: date-time
+
+    KPITrend:
+      type: object
+      properties:
+        property_id:
+          type: string
+          format: uuid
+        metric:
+          type: string
+        data_points:
+          type: array
+          items:
+            type: object
+            properties:
+              period:
+                type: string
+              value:
+                type: number
+                format: double
+
+    # ---- Dashboard ----
+    DashboardSummary:
+      type: object
+      properties:
+        total_properties:
+          type: integer
+        total_units:
+          type: integer
+        avg_occupancy_rate:
+          type: number
+          format: double
+        total_noi:
+          type: number
+          format: double
+        avg_expense_ratio:
+          type: number
+          format: double
+        period:
+          type: string
+          description: Period these stats apply to
+        properties_above_target:
+          type: integer
+          description: Count of properties above target metrics
+        properties_below_target:
+          type: integer
+          description: Count of properties below target metrics
+
+    FilterOptions:
+      type: object
+      properties:
+        submarkets:
+          type: array
+          items:
+            type: string
+        property_types:
+          type: array
+          items:
+            type: string
+        periods:
+          type: array
+          items:
+            type: string
+          description: Available periods (YYYY-MM)
+
+    # ---- Errors ----
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
